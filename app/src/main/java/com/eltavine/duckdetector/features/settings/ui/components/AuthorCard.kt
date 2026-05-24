@@ -18,6 +18,7 @@ package com.eltavine.duckdetector.features.settings.ui.components
 
 import android.os.SystemClock
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,7 +42,6 @@ import androidx.compose.material.icons.rounded.Swipe
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -59,7 +59,6 @@ import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -78,11 +77,10 @@ import kotlin.math.abs
 fun AuthorCard(
     modifier: Modifier = Modifier,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     val authors = listOf(
         AuthorProfile(
             name = "Eltavine",
-            visual = AuthorVisual.Portrait(R.drawable.eltavine),
+            avatarRes = R.drawable.author_eltavine,
             contributionSummary = stringResource(R.string.author_summary_eltavine),
             contributions = listOf(
                 AuthorContribution.Ui,
@@ -92,17 +90,8 @@ fun AuthorCard(
             ),
         ),
         AuthorProfile(
-            name = "芙兰朵布丁",
-            visual = AuthorVisual.Portrait(R.drawable.baka),
-            contributionSummary = stringResource(R.string.author_summary_baka),
-            contributions = listOf(
-                AuthorContribution.Cpp,
-                AuthorContribution.Kotlin,
-            ),
-        ),
-        AuthorProfile(
             name = "XiaoTong6666",
-            visual = AuthorVisual.Portrait(R.drawable.xiaotong),
+            avatarRes = R.drawable.author_xiaotong6666,
             contributionSummary = stringResource(R.string.author_summary_xiaotong),
             contributions = listOf(
                 AuthorContribution.Cpp,
@@ -110,20 +99,17 @@ fun AuthorCard(
             ),
         ),
         AuthorProfile(
-            name = "wxxsfxyzm",
-            visual = AuthorVisual.Portrait(R.drawable.wxxsfxyzm),
-            contributionSummary = stringResource(R.string.author_summary_wxx),
+            name = "FldBudin",
+            avatarRes = R.drawable.author_fldbudin,
+            contributionSummary = stringResource(R.string.author_summary_baka),
             contributions = listOf(
+                AuthorContribution.Cpp,
                 AuthorContribution.Kotlin,
             ),
         ),
         AuthorProfile(
             name = "AlexLiuDev233",
-            visual = AuthorVisual.Monogram(
-                initials = "AL",
-                backgroundColor = colorScheme.primaryContainer,
-                foregroundColor = colorScheme.onPrimaryContainer,
-            ),
+            avatarRes = R.drawable.author_alexliudev233,
             contributionSummary = stringResource(R.string.author_summary_alex),
             contributions = listOf(
                 AuthorContribution.Cpp,
@@ -131,25 +117,9 @@ fun AuthorCard(
             ),
         ),
         AuthorProfile(
-            name = "LingQingBigKing",
-            visual = AuthorVisual.Monogram(
-                initials = "LQ",
-                backgroundColor = colorScheme.tertiaryContainer,
-                foregroundColor = colorScheme.onTertiaryContainer,
-            ),
-            contributionSummary = stringResource(R.string.author_summary_lingqing),
-            contributions = listOf(
-                AuthorContribution.Cpp,
-            ),
-        ),
-        AuthorProfile(
-            name = "SQMY-dor",
-            visual = AuthorVisual.Monogram(
-                initials = "SQ",
-                backgroundColor = colorScheme.secondaryContainer,
-                foregroundColor = colorScheme.onSecondaryContainer,
-            ),
-            contributionSummary = stringResource(R.string.author_summary_sqmy),
+            name = "Searchur",
+            avatarRes = R.drawable.author_searchur,
+            contributionSummary = stringResource(R.string.author_summary_searchur),
             contributions = listOf(
                 AuthorContribution.Ui,
                 AuthorContribution.Kotlin,
@@ -157,23 +127,72 @@ fun AuthorCard(
         ),
         AuthorProfile(
             name = "VictorModi",
-            visual = AuthorVisual.Monogram(
-                initials = "VM",
-                backgroundColor = colorScheme.surfaceVariant,
-                foregroundColor = colorScheme.onSurfaceVariant,
-            ),
+            avatarRes = R.drawable.author_victormodi,
             contributionSummary = stringResource(R.string.author_summary_victor),
             contributions = listOf(
                 AuthorContribution.Kotlin,
             ),
         ),
         AuthorProfile(
-            name = "MiRinChan",
-            visual = AuthorVisual.Monogram(
-                initials = "MR",
-                backgroundColor = colorScheme.errorContainer,
-                foregroundColor = colorScheme.onErrorContainer,
+            name = "HSSkyBoy",
+            avatarRes = R.drawable.author_hsskyboy,
+            contributionSummary = stringResource(R.string.author_summary_hsskyboy),
+            contributions = listOf(
+                AuthorContribution.Cpp,
             ),
+        ),
+        AuthorProfile(
+            name = "LingQingBigKing",
+            avatarRes = R.drawable.author_lingqingbigking,
+            contributionSummary = stringResource(R.string.author_summary_lingqing),
+            contributions = listOf(
+                AuthorContribution.Cpp,
+            ),
+        ),
+        AuthorProfile(
+            name = "SQMY-dor",
+            avatarRes = R.drawable.author_sqmy_dor,
+            contributionSummary = stringResource(R.string.author_summary_sqmy),
+            contributions = listOf(
+                AuthorContribution.Ui,
+                AuthorContribution.Kotlin,
+            ),
+        ),
+        AuthorProfile(
+            name = "ZG089",
+            avatarRes = R.drawable.author_zg089,
+            contributionSummary = stringResource(R.string.author_summary_zg089),
+            contributions = listOf(
+                AuthorContribution.Ui,
+            ),
+        ),
+        AuthorProfile(
+            name = "coolzyd9107",
+            avatarRes = R.drawable.author_coolzyd9107,
+            contributionSummary = stringResource(R.string.author_summary_coolzyd),
+            contributions = listOf(
+                AuthorContribution.Cpp,
+            ),
+        ),
+        AuthorProfile(
+            name = "wxxsfxyzm",
+            avatarRes = R.drawable.author_wxxsfxyzm,
+            contributionSummary = stringResource(R.string.author_summary_wxx),
+            contributions = listOf(
+                AuthorContribution.Kotlin,
+            ),
+        ),
+        AuthorProfile(
+            name = "947409161",
+            avatarRes = R.drawable.author_947409161,
+            contributionSummary = stringResource(R.string.author_summary_947409161),
+            contributions = listOf(
+                AuthorContribution.Ui,
+            ),
+        ),
+        AuthorProfile(
+            name = "MiRinChan",
+            avatarRes = R.drawable.author_mirinchan,
             contributionSummary = stringResource(R.string.author_summary_mirin),
             contributions = listOf(
                 AuthorContribution.Ui,
@@ -312,42 +331,22 @@ private fun AuthorAvatar(
     profile: AuthorProfile,
     modifier: Modifier = Modifier,
 ) {
-    val visual = profile.visual
-    val backgroundColor = when (visual) {
-        is AuthorVisual.Portrait -> MaterialTheme.colorScheme.surface
-        is AuthorVisual.Monogram -> visual.backgroundColor
-    }
-
     Box(
         modifier = modifier
             .clip(CircleShape)
-            .background(backgroundColor)
+            .background(MaterialTheme.colorScheme.surface)
             .border(
                 BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 CircleShape,
             ),
         contentAlignment = Alignment.Center,
     ) {
-        when (visual) {
-            is AuthorVisual.Portrait -> {
-                Image(
-                    painter = painterResource(id = visual.portraitRes),
-                    contentDescription = profile.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            is AuthorVisual.Monogram -> {
-                Text(
-                    text = visual.initials,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                    ),
-                    color = visual.foregroundColor,
-                )
-            }
-        }
+        Image(
+            painter = androidx.compose.ui.res.painterResource(id = profile.avatarRes),
+            contentDescription = profile.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
@@ -427,22 +426,10 @@ private fun ContributionIcon(
 
 private data class AuthorProfile(
     val name: String,
-    val visual: AuthorVisual,
+    @param:DrawableRes val avatarRes: Int,
     val contributionSummary: String,
     val contributions: List<AuthorContribution>,
 )
-
-private sealed class AuthorVisual {
-    data class Portrait(
-        val portraitRes: Int,
-    ) : AuthorVisual()
-
-    data class Monogram(
-        val initials: String,
-        val backgroundColor: Color,
-        val foregroundColor: Color,
-    ) : AuthorVisual()
-}
 
 private sealed class AuthorContribution(
     val label: String,
