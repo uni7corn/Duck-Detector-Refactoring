@@ -114,10 +114,8 @@ security detection is at your own risk.
 本项目基于 **Apache License 2.0** 协议开源。
 ## 👥 贡献者 / Contributors
 感谢以下为 DuckDetector 做出贡献的开发者们！
-<a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors">
-<img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" />
-</a>
 <p>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors"><img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" alt="Contributors"></a>
   <a href="https://github.com/aviraxp" title="SELinux 与 LSPosed 误报反馈"><img src="https://github.com/aviraxp.png?size=64" width="64" alt="aviraxp"></a>
   <a href="https://github.com/5ec1cff" title="SELinux 与 LSPosed 误报发现"><img src="https://github.com/5ec1cff.png?size=64" width="64" alt="5ec1cff"></a>
 </p>

@@ -107,10 +107,8 @@ security detection is at your own risk.
 ## 📄 License
 This project is open-sourced under the **Apache License 2.0**.
 ## 👥 Contributors
-<a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors">
-<img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" />
-</a>
 <p>
+  <a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors"><img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" alt="Contributors"></a>
   <a href="https://github.com/aviraxp" title="SELinux and LSPosed false-positive report"><img src="https://github.com/aviraxp.png?size=64" width="64" alt="aviraxp"></a>
   <a href="https://github.com/5ec1cff" title="SELinux and LSPosed false-positive finding"><img src="https://github.com/5ec1cff.png?size=64" width="64" alt="5ec1cff"></a>
 </p>
