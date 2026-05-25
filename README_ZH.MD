@@ -96,8 +96,9 @@ gradlew.bat :app:assembleDebug
  * **启发式检测**：所有安全检测均基于启发式算法（Heuristics）。任何单一信号都不应孤立地作为绝对的可信凭证。
  * **硬件与厂商限制**：因 OEM 策略或沙盒规则，部分探针在特定机型上可能报告降级状态。部分低级底层检查依赖于 arm64-v8a ABI 架构。
 ## 📈 项目状态与趋势 / Status & Stars
-本仓库正处于**积极演进和迭代**中。新的检测模块和启发式机制不断被加入，检测阈值也在持续微调，以尽可能降低在官方原厂系统上的误报率（False Positives）。
-Star History Chart
+
+[![Star History Chart][star-history-chart]][star-history]
+
 ## ⚖️ 免责声明 / Disclaimer
 ```text
 本软件按“原样”提供，不提供任何明示或暗示的保证。本程序仅供教育、诊断和安全研究目的使用。
@@ -116,3 +117,5 @@ security detection is at your own risk.
 <a href="https://github.com/eltavine/Duck-Detector-Refactoring/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=eltavine/Duck-Detector-Refactoring" />
 </a>
+
+[star-history-chart]: https://api.star-history.com/svg?repos=eltavine/Duck-Detector-Refactoring&type=Date
