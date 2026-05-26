@@ -18,6 +18,7 @@ package com.eltavine.duckdetector.features.tee.data.report
 
 import android.os.Build
 import com.eltavine.duckdetector.features.tee.data.attestation.AttestationSnapshot
+import com.eltavine.duckdetector.features.tee.data.verification.crl.RevokedCertificateEvidenceKind
 import com.eltavine.duckdetector.features.tee.domain.TeeEvidenceItem
 import com.eltavine.duckdetector.features.tee.domain.TeeEvidenceSection
 import com.eltavine.duckdetector.features.tee.domain.TeeNetworkMode
@@ -31,6 +32,8 @@ import com.eltavine.duckdetector.features.tee.domain.TeeTier
 import com.eltavine.duckdetector.features.tee.domain.TeeTrustRoot
 import com.eltavine.duckdetector.features.tee.domain.TeeVerdict
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantDomainAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.SyntheticGrantGranteeBlindReadbackAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.GrantSelfDomainAnomalyKind
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.MIN_RATIO_SAMPLE_COUNT
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TIMING_SIDE_CHANNEL_THRESHOLD_RATIO
@@ -220,11 +223,11 @@ class TeeReportReducer(
                     )
                 )
             }
-            if (artifacts.crl.revokedCertificates.isNotEmpty()) {
+            if (hasHardRevocation(artifacts)) {
                 add(
                     fact(
                         "Revocation",
-                        "Official revocation feed matched certificate serials from the chain.",
+                        "Revocation data matched certificate serials from the chain.",
                         TeeSignalLevel.FAIL
                     )
                 )
@@ -311,8 +314,51 @@ class TeeReportReducer(
                     )
                 }
 
+                GrantDomainAnomalyKind.ISOLATED_PRIVATE_READBACK_CRASH -> {
+                    add(
+                        fact(
+                            "Grant isolated-domain",
+                            "Grant isolated-domain isolated private readback crashed after grant succeeded. " +
+                                grantDomainFullChainSplitValue(artifacts),
+                            TeeSignalLevel.WARN,
+                            hiddenCopyText = artifacts.grantDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
+                        )
+                    )
+                }
+
                 GrantDomainAnomalyKind.NONE,
                 GrantDomainAnomalyKind.UNAVAILABLE -> Unit
+            }
+            if (
+                artifacts.syntheticGrantGranteeBlindReadback.anomalyKind ==
+                SyntheticGrantGranteeBlindReadbackAnomalyKind.NON_GRANTEE_READBACK_ALLOWED
+            ) {
+                add(
+                    fact(
+                        "Grant caller binding",
+                        "Grant handle remained readable by its non-grantee owner. " +
+                            syntheticGrantGranteeBlindReadbackValue(artifacts),
+                        TeeSignalLevel.FAIL,
+                        hiddenCopyText = artifacts.syntheticGrantGranteeBlindReadback.diagnosticCopyText
+                            .takeIf { it.isNotBlank() },
+                    )
+                )
+            }
+            if (
+                artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness.anomalyKind ==
+                SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED
+            ) {
+                add(
+                    fact(
+                        "Grant access vector",
+                        "Domain.GRANT handle without GET_INFO still allowed getKeyEntry metadata readback. " +
+                            syntheticGrantGetKeyEntryAccessVectorBlindnessValue(artifacts),
+                        TeeSignalLevel.FAIL,
+                        hiddenCopyText = artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness.diagnosticCopyText
+                            .takeIf { it.isNotBlank() },
+                    )
+                )
             }
             // self-domain removes the isolated-process policy variable; its key-not-found variant is treated like a visibility split.
             // self-domain 排除了 isolated-process 策略变量；其 key-not-found 变体按可见性断裂处理。
@@ -669,6 +715,15 @@ class TeeReportReducer(
             artifacts.rkp.consistencyIssue?.let { issue ->
                 add(fact("RKP consistency", issue, TeeSignalLevel.WARN))
             }
+            if (hasLocalMassAbuseRevocation(artifacts)) {
+                add(
+                    fact(
+                        "Revocation",
+                        "Built-in local revocation floor matched a certificate serial associated with mass abuse.",
+                        TeeSignalLevel.WARN,
+                    )
+                )
+            }
         }
     }
 
@@ -898,6 +953,24 @@ class TeeReportReducer(
                             grantDomainFullChainSplitValue(artifacts),
                             grantDomainFullChainSplitLevel(artifacts),
                             hiddenCopyText = artifacts.grantDomainFullChainSplit.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
+                        )
+                    )
+                    add(
+                        fact(
+                            "Grant caller binding",
+                            syntheticGrantGranteeBlindReadbackValue(artifacts),
+                            syntheticGrantGranteeBlindReadbackLevel(artifacts),
+                            hiddenCopyText = artifacts.syntheticGrantGranteeBlindReadback.diagnosticCopyText
+                                .takeIf { it.isNotBlank() },
+                        )
+                    )
+                    add(
+                        fact(
+                            "Grant access vector",
+                            syntheticGrantGetKeyEntryAccessVectorBlindnessValue(artifacts),
+                            syntheticGrantGetKeyEntryAccessVectorBlindnessLevel(artifacts),
+                            hiddenCopyText = artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness.diagnosticCopyText
                                 .takeIf { it.isNotBlank() },
                         )
                     )
@@ -1351,19 +1424,22 @@ class TeeReportReducer(
         val network = artifacts.crl.networkState
         val sourceLabel = when {
             network.mode == TeeNetworkMode.ACTIVE -> "Online"
-            network.mode == TeeNetworkMode.CONSENT_REQUIRED -> "Consent required"
-            network.mode == TeeNetworkMode.SKIPPED -> "Disabled in Settings"
-            network.mode == TeeNetworkMode.ERROR -> "Refresh failed"
-            network.mode == TeeNetworkMode.INACTIVE -> "Offline only"
-            else -> "Offline only"
+            network.mode == TeeNetworkMode.CONSENT_REQUIRED -> "Built-in snapshot"
+            network.mode == TeeNetworkMode.SKIPPED -> "Built-in snapshot"
+            network.mode == TeeNetworkMode.ERROR && network.usedCache -> "Built-in snapshot"
+            network.mode == TeeNetworkMode.ERROR -> "Unavailable"
+            network.mode == TeeNetworkMode.INACTIVE -> "Built-in snapshot"
+            else -> "Built-in snapshot"
         }
         return buildString {
             append(sourceLabel)
-            if (network.mode == TeeNetworkMode.ACTIVE) {
+            if (network.mode == TeeNetworkMode.ACTIVE || network.usedCache) {
                 append(" • ")
                 append(
                     if (artifacts.crl.revokedCertificates.isEmpty()) {
                         "clean"
+                    } else if (hasLocalMassAbuseRevocation(artifacts) && !hasHardRevocation(artifacts)) {
+                        "mass abuse"
                     } else {
                         "${artifacts.crl.revokedCertificates.size} revoked"
                     },
@@ -1594,6 +1670,69 @@ class TeeReportReducer(
                 append(result.anomalyKind.name)
                 result.ownerChainLength.takeIf { it > 0 }?.let { append(" owner=$it") }
                 result.granteeUid?.let { append(" uid=$it") }
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+        }
+    }
+
+    private fun syntheticGrantGranteeBlindReadbackValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.syntheticGrantGranteeBlindReadback
+        return when {
+            result.anomalyKind == SyntheticGrantGranteeBlindReadbackAnomalyKind.NON_GRANTEE_READBACK_ALLOWED ->
+                buildString {
+                    append("Matched kind=NON_GRANTEE_READBACK_ALLOWED")
+                    result.granteeUid?.let { append(" uid=$it") }
+                    append(" ownerReplay=true")
+                    result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+                }
+            result.executed && result.available &&
+                result.anomalyKind == SyntheticGrantGranteeBlindReadbackAnomalyKind.NONE ->
+                buildString {
+                    append("Clean kind=NONE")
+                    result.granteeUid?.let { append(" uid=$it") }
+                    append(" ownerReplay=KEY_NOT_FOUND")
+                    result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+                }
+            result.anomalyKind == SyntheticGrantGranteeBlindReadbackAnomalyKind.SKIPPED_AFTER_EXISTING_GRANT_DANGER ->
+                "Skipped • ${result.detail}"
+            else -> buildString {
+                append("Unavailable kind=")
+                append(result.anomalyKind.name)
+                result.ownerReplayErrorKind?.let { append(" ownerReplay=$it") }
+                result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+            }
+        }
+    }
+
+    private fun syntheticGrantGetKeyEntryAccessVectorBlindnessValue(artifacts: TeeScanArtifacts): String {
+        val result = artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness
+        return when {
+            result.anomalyKind ==
+                SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED ->
+                buildString {
+                    append("Matched kind=GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED")
+                    result.granteeUid?.let { append(" uid=$it") }
+                    result.accessVector?.let { append(" accessVector=$it") }
+                    append(" granteeRead=true")
+                    result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+                }
+            result.executed && result.available &&
+                result.anomalyKind == SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.NONE ->
+                buildString {
+                    append("Clean kind=NONE")
+                    result.granteeUid?.let { append(" uid=$it") }
+                    result.accessVector?.let { append(" accessVector=$it") }
+                    append(" granteeRead=PERMISSION_DENIED")
+                    result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
+                }
+            result.anomalyKind ==
+                SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.SKIPPED_AFTER_EXISTING_GRANT_DANGER ->
+                "Skipped • ${result.detail}"
+            else -> buildString {
+                append("Unavailable kind=")
+                append(result.anomalyKind.name)
+                result.granteeReadErrorKind?.let { append(" granteeRead=$it") }
+                result.accessVector?.let { append(" accessVector=$it") }
                 result.detail.takeIf { it.isNotBlank() }?.let { append(" • $it") }
             }
         }
@@ -1928,10 +2067,34 @@ class TeeReportReducer(
             result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT -> TeeSignalLevel.FAIL
             result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN ->
                 TeeSignalLevel.FAIL
+            result.anomalyKind == GrantDomainAnomalyKind.ISOLATED_PRIVATE_READBACK_CRASH -> TeeSignalLevel.WARN
 
             result.executed && result.splitDetected -> TeeSignalLevel.FAIL
             result.executed && result.available -> TeeSignalLevel.PASS
             else -> TeeSignalLevel.INFO
+        }
+    }
+
+    private fun syntheticGrantGranteeBlindReadbackLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
+        val result = artifacts.syntheticGrantGranteeBlindReadback
+        return when (result.anomalyKind) {
+            SyntheticGrantGranteeBlindReadbackAnomalyKind.NON_GRANTEE_READBACK_ALLOWED -> TeeSignalLevel.FAIL
+            SyntheticGrantGranteeBlindReadbackAnomalyKind.NONE ->
+                if (result.executed && result.available) TeeSignalLevel.PASS else TeeSignalLevel.INFO
+            SyntheticGrantGranteeBlindReadbackAnomalyKind.SKIPPED_AFTER_EXISTING_GRANT_DANGER,
+            SyntheticGrantGranteeBlindReadbackAnomalyKind.UNAVAILABLE -> TeeSignalLevel.INFO
+        }
+    }
+
+    private fun syntheticGrantGetKeyEntryAccessVectorBlindnessLevel(artifacts: TeeScanArtifacts): TeeSignalLevel {
+        val result = artifacts.syntheticGrantGetKeyEntryAccessVectorBlindness
+        return when (result.anomalyKind) {
+            SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.GET_KEY_ENTRY_WITHOUT_GET_INFO_ALLOWED ->
+                TeeSignalLevel.FAIL
+            SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.NONE ->
+                if (result.executed && result.available) TeeSignalLevel.PASS else TeeSignalLevel.INFO
+            SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.SKIPPED_AFTER_EXISTING_GRANT_DANGER,
+            SyntheticGrantGetKeyEntryAccessVectorBlindnessAnomalyKind.UNAVAILABLE -> TeeSignalLevel.INFO
         }
     }
 
@@ -2165,10 +2328,12 @@ class TeeReportReducer(
     }
 
     private fun crlSignalValue(artifacts: TeeScanArtifacts): String = when {
-        artifacts.crl.revokedCertificates.isNotEmpty() -> "Revoked"
+        hasHardRevocation(artifacts) -> "Revoked"
+        hasLocalMassAbuseRevocation(artifacts) -> "Mass abuse"
         artifacts.crl.networkState.mode == TeeNetworkMode.ACTIVE -> "Online"
-        artifacts.crl.networkState.mode == TeeNetworkMode.CONSENT_REQUIRED -> "Consent"
-        artifacts.crl.networkState.mode == TeeNetworkMode.SKIPPED -> "Disabled"
+        artifacts.crl.networkState.mode == TeeNetworkMode.CONSENT_REQUIRED -> "Built-in"
+        artifacts.crl.networkState.mode == TeeNetworkMode.SKIPPED -> "Built-in"
+        artifacts.crl.networkState.mode == TeeNetworkMode.ERROR && artifacts.crl.networkState.usedCache -> "Built-in"
         artifacts.crl.networkState.mode == TeeNetworkMode.ERROR -> "Error"
         else -> "Offline"
     }
@@ -2244,7 +2409,8 @@ class TeeReportReducer(
     }
 
     private fun crlSignalLevel(artifacts: TeeScanArtifacts): TeeSignalLevel = when {
-        artifacts.crl.revokedCertificates.isNotEmpty() -> TeeSignalLevel.FAIL
+        hasHardRevocation(artifacts) -> TeeSignalLevel.FAIL
+        hasLocalMassAbuseRevocation(artifacts) -> TeeSignalLevel.WARN
         artifacts.crl.networkState.mode == TeeNetworkMode.ACTIVE -> TeeSignalLevel.PASS
         artifacts.crl.networkState.mode == TeeNetworkMode.ERROR -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.INFO
@@ -2528,6 +2694,19 @@ class TeeReportReducer(
         !artifacts.trust.chainSignatureValid -> TeeSignalLevel.FAIL
         hasLocalTrustReviewSignals(artifacts) -> TeeSignalLevel.WARN
         else -> TeeSignalLevel.PASS
+    }
+
+    private fun hasHardRevocation(artifacts: TeeScanArtifacts): Boolean {
+        return artifacts.crl.revokedCertificates.any {
+            it.evidenceKind == RevokedCertificateEvidenceKind.STANDARD_REVOCATION
+        }
+    }
+
+    private fun hasLocalMassAbuseRevocation(artifacts: TeeScanArtifacts): Boolean {
+        // 临时本地口径：仅 checked-in 硬编码序列号命中时降级为 WARN，远端/联网 CRL 仍按标准吊销处理。
+        return artifacts.crl.revokedCertificates.any {
+            it.evidenceKind == RevokedCertificateEvidenceKind.LOCAL_MASS_ABUSE
+        }
     }
 
     private fun hasLocalTrustReviewSignals(artifacts: TeeScanArtifacts): Boolean {

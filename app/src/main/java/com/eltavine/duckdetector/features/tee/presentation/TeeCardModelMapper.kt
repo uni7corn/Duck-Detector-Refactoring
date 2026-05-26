@@ -149,7 +149,11 @@ class TeeCardModelMapper {
         }
 
     private fun TeeReport.topFindingDetail(): String? {
-        if (!summary.contains("Grant self-domain") && !summary.contains("Grant isolated-domain")) {
+        if (
+            !summary.contains("Grant self-domain") &&
+            !summary.contains("Grant isolated-domain") &&
+            !summary.contains("Grant handle")
+        ) {
             return null
         }
         // Grant stage details can include Java/hidden/private summaries. Keep that audit text inside
@@ -160,9 +164,24 @@ class TeeCardModelMapper {
             .flatMap { section -> section.items.asSequence() }
             .firstOrNull { item ->
                 item.level == TeeSignalLevel.FAIL &&
-                    (item.title == "Grant self-domain" || item.title == "Grant isolated-domain")
+                    (
+                        item.title == "Grant self-domain" ||
+                            item.title == "Grant isolated-domain" ||
+                            item.title == "Grant caller binding"
+                        )
             }
-            ?: return null
+            ?: sections
+                .asSequence()
+                .flatMap { section -> section.items.asSequence() }
+                .firstOrNull { item ->
+                    item.level == TeeSignalLevel.WARN &&
+                        (
+                            item.title == "Grant self-domain" ||
+                                item.title == "Grant isolated-domain" ||
+                                item.title == "Grant caller binding"
+                            )
+                }
+                ?: return null
 
         val keyVisibilityDiverged =
             summary.contains("key visibility", ignoreCase = true) ||
@@ -176,9 +195,13 @@ class TeeCardModelMapper {
             }
             "Grant isolated-domain" -> if (keyVisibilityDiverged) {
                 "Grant isolated-domain key visibility diverged; open TEE details for stage diagnostics."
+            } else if (grantFailure.level == TeeSignalLevel.WARN) {
+                "Grant isolated-domain runtime crash; open TEE details for stage diagnostics."
             } else {
                 "Grant isolated-domain certificate chain diverged; open TEE details for stage diagnostics."
             }
+            "Grant caller binding" ->
+                "Grant handle caller binding failed; open TEE details for stage diagnostics."
             else -> null
         }
     }
